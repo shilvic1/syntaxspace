@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Code Editor | SyntaxSpace</title>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.global/a69e27d8-d825-4498-80bc-bb07dc33e04f/Syntax%20Space.png?v=1737503683017"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/theme/material.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/theme/monokai.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/theme/eclipse.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/theme/ambiance.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/theme/ayu-mirage.min.css"
+    />
+    <style>
+      #sidebar {
+        width: 300px;
+        flex-shrink: 0;
+        border-radius: 12px;
+      }
+
+      .CodeMirror {
+        height: 100%;
+        font-size: 1rem;
+        border-radius: 12px;
+      }
+
+      /* Theme Styles */
+      .theme-dark {
+        --bg-color: #1a1a1a;
+        --text-color: #e0e0e0;
+        --editor-bg: #282c34;
+      }
+
+      .theme-light {
+        --bg-color: #ffffff;
+        --text-color: #000000;
+        --editor-bg: #f5f5f5;
+      }
+
+      .theme-matrix {
+        --bg-color: #000000;
+        --text-color: #00ff00;
+        --editor-bg: #001a00;
+      }
+
+      .theme-future-blue {
+        --bg-color: #1b2d4b;
+        --text-color: #00aaff;
+        --editor-bg: #112233;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+      }
+
+      #code-editor .CodeMirror {
+        background-color: var(--editor-bg) !important;
+        color: var(--text-color) !important;
+      }
+    </style>
+  </head>
+  <body class="theme-dark">
+    <!-- Navbar -->
+    <nav
+      class="bg-gray-900 px-6 py-4 shadow-md flex justify-between items-center"
+    >
+      <div class="flex items-center">
+        <a href="/" class="flex items-center">
+          <img
+            src="https://cdn.glitch.global/a69e27d8-d825-4498-80bc-bb07dc33e04f/Syntax%20Space.png?v=1737503683017"
+            alt="SyntaxSpace Logo"
+            class="h-10 w-10 mr-3"
+          />
+          <span class="text-2xl font-bold text-cyan-400">SyntaxSpace</span>
+        </a>
+      </div>
+      <div class="flex items-center space-x-4">
+        <!-- Theme Selector -->
+        <select
+          id="theme-selector"
+          class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600"
+        >
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+          <option value="matrix">Matrix</option>
+          <option value="future-blue">Future Blue</option>
+        </select>
+        <button
+          id="back-to-projects"
+          class="bg-cyan-400 text-black px-4 py-2 rounded hover:bg-cyan-500"
+        >
+          Back to Projects
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Layout -->
+    <div class="flex h-[calc(100vh-64px)]">
+      <!-- File Tree Sidebar -->
+      <aside
+        id="sidebar"
+        class="bg-gray-800 p-4 shadow-lg flex flex-col space-y-4 rounded-r-lg"
+      >
+        <!-- Create File Button -->
+        <button
+          id="create-file-btn"
+          class="bg-cyan-400 text-black w-full py-2 rounded hover:bg-cyan-500"
+        >
+          Create New File ➕
+        </button>
+
+        <!-- Search Bar with Filters -->
+        <div>
+          <input
+            type="text"
+            id="file-search"
+            class="w-full p-2 rounded bg-gray-700 text-gray-200 placeholder-gray-400 mb-2"
+            placeholder="Search files..."
+          />
+          <select
+            id="file-filter"
+            class="w-full p-2 rounded bg-gray-700 text-gray-200"
+          >
+            <option value="">All Files</option>
+            <option value="html">HTML Only</option>
+            <option value="css">CSS Only</option>
+            <option value="js">JavaScript Only</option>
+          </select>
+        </div>
+
+        <!-- File Tree -->
+        <ul id="file-tree" class="space-y-2"></ul>
+      </aside>
+
+      <!-- Code Editor -->
+      <main class="flex-1 bg-gray-900 p-6 flex flex-col">
+        <!-- Selected File Name -->
+        <h2
+          id="current-file-name"
+          class="text-lg font-bold mb-4 bg-gray-800 px-4 py-2 rounded shadow"
+        >
+          Untitled
+        </h2>
+        <div id="code-editor" class="flex-1"></div>
+        <div class="mt-4 flex justify-between">
+          <button
+            id="save-btn"
+            class="bg-cyan-400 text-black px-4 py-2 rounded hover:bg-cyan-500"
+          >
+            Save
+          </button>
+        </div>
+      </main>
+    </div>
+
+    <!-- CodeMirror JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/css/css.min.js"></script>
+    <script>
+      // Create a hidden file input for manual file import
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = ".html, .css, .js";
+      fileInput.style.display = "none";
+      document.body.appendChild(fileInput);
+
+      // Create an "Import File" button
+      const importFileBtn = document.createElement("button");
+      importFileBtn.id = "import-file-btn";
+      importFileBtn.textContent = "Import File";
+      importFileBtn.className =
+        "fixed bottom-4 left-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow-lg transition";
+      document.body.appendChild(importFileBtn);
+
+      // Click event to open file selector
+      importFileBtn.addEventListener("click", () => fileInput.click());
+
+      // Handle manual file selection
+      fileInput.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          readFile(file);
+        }
+      });
+
+      // Drag & Drop file upload
+      document.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+      });
+
+      document.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const file = event.dataTransfer.files[0];
+        if (file) {
+          readFile(file);
+        }
+      });
+
+      // Function to read and store file contents
+      function readFile(file) {
+        if (
+          !file.name.endsWith(".html") &&
+          !file.name.endsWith(".css") &&
+          !file.name.endsWith(".js")
+        ) {
+          alert("Only .html, .css, and .js files are supported.");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const content = e.target.result;
+          project.files[file.name] = content;
+          localStorage.setItem("projects", JSON.stringify(projects));
+          selectFile(file.name); // Open the file in the editor
+          renderFileTree();
+        };
+        reader.readAsText(file);
+      }
+
+      // Now HTML Preview allows users to see their changes in real-time through a live preview window (iframe) next to the editor.
+      // Users can link CSS and JavaScript files in this window to test styles and interactivity.
+      // The iframe (preview-iframe) shows the live output based on the user's files, with toggle options for a preview pane
+      // and a new window using the preview button next to the save button.
+
+      // Get project data from localStorage
+      const projectId = new URLSearchParams(window.location.search).get(
+        "projectId"
+      );
+      const projects = JSON.parse(localStorage.getItem("projects")) || [];
+      const project = projects.find((p) => p.id === projectId);
+
+      if (!project) {
+        alert("Project not found!");
+        window.location.href = "/projects.html";
+      }
+
+      if (!project.files) {
+        project.files = {
+          "index.html": "<h1>My First Heading</h1>\n<p>My first paragraph.</p>",
+          "styles.css": "/* Add your styles here */",
+          "script.js": "// Add your JavaScript here",
+        };
+        localStorage.setItem("projects", JSON.stringify(projects));
+      }
+
+      // DOM Elements
+      const fileTree = document.getElementById("file-tree");
+      const fileSearch = document.getElementById("file-search");
+      const fileFilter = document.getElementById("file-filter");
+      const currentFileName = document.getElementById("current-file-name");
+      const saveBtn = document.getElementById("save-btn");
+      const createFileBtn = document.getElementById("create-file-btn");
+      const themeSelector = document.getElementById("theme-selector");
+      const backToProjectsBtn = document.getElementById("back-to-projects");
+
+      let selectedFile = Object.keys(project.files)[0];
+
+      // Create and add the search bar to the document
+      const searchBar = document.createElement("div");
+      searchBar.id = "search-bar";
+      searchBar.className =
+        "hidden fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 p-3 rounded shadow-md w-1/3";
+      searchBar.innerHTML = `
+  <input type="text" id="search-input" class="w-full p-2 rounded bg-gray-700 text-gray-200 placeholder-gray-400">
+`;
+      document.body.appendChild(searchBar);
+
+      // Initialize CodeMirror
+      const editor = CodeMirror(document.getElementById("code-editor"), {
+        value: project.files[selectedFile] || "",
+        mode: "javascript",
+        theme: "material",
+        lineNumbers: true,
+      });
+
+      // Load saved theme from localStorage
+      const savedTheme = localStorage.getItem("theme") || "dark";
+      applyTheme(savedTheme);
+
+      themeSelector.addEventListener("change", (e) => {
+        const theme = e.target.value;
+        applyTheme(theme);
+        localStorage.setItem("theme", theme);
+      });
+
+      function applyTheme(theme) {
+        document.body.className = `theme-${theme}`;
+        themeSelector.value = theme;
+        switch (theme) {
+          case "light":
+            editor.setOption("theme", "eclipse");
+            break;
+          case "matrix":
+            editor.setOption("theme", "ayu-mirage");
+            break;
+          case "future-blue":
+            editor.setOption("theme", "ambiance");
+            break;
+          default:
+            editor.setOption("theme", "material");
+            break;
+        }
+      }
+
+      function renderFileTree() {
+        fileTree.innerHTML = "";
+        const filter = fileFilter.value;
+        Object.keys(project.files)
+          .filter((fileName) =>
+            fileName.toLowerCase().includes(fileSearch.value.toLowerCase())
+          )
+          .filter((fileName) =>
+            !filter ? true : fileName.endsWith(`.${filter}`)
+          )
+          .forEach((fileName) => {
+            const li = document.createElement("li");
+            li.className =
+              "bg-gray-700 text-gray-200 flex justify-between items-center p-2 rounded cursor-pointer hover:bg-gray-600";
+            li.dataset.fileName = fileName;
+
+            if (fileName === selectedFile) li.classList.add("file-selected");
+
+            const fileNameSpan = document.createElement("span");
+            fileNameSpan.textContent = fileName;
+
+            const actions = document.createElement("div");
+            actions.className = "file-actions space-x-2";
+
+            const renameBtn = document.createElement("button");
+            renameBtn.textContent = "✏️";
+            renameBtn.className = "text-yellow-400 hover:text-yellow-500";
+            renameBtn.onclick = () => renameFile(fileName);
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "🗑️";
+            deleteBtn.className = "text-red-500 hover:text-red-700";
+            deleteBtn.onclick = () => deleteFile(fileName);
+
+            actions.appendChild(renameBtn);
+            actions.appendChild(deleteBtn);
+
+            li.appendChild(fileNameSpan);
+            li.appendChild(actions);
+
+            li.onclick = () => selectFile(fileName);
+
+            fileTree.appendChild(li);
+          });
+      }
+
+      function selectFile(fileName) {
+        selectedFile = fileName;
+        editor.setValue(project.files[fileName]);
+        currentFileName.textContent = fileName;
+        updateSearchPlaceholder();
+        renderFileTree();
+      }
+
+      function renameFile(fileName) {
+        const newName = prompt("Enter the new name:", fileName);
+        if (newName && newName !== fileName) {
+          project.files[newName] = project.files[fileName];
+          delete project.files[fileName];
+          localStorage.setItem("projects", JSON.stringify(projects));
+          renderFileTree();
+        }
+      }
+
+      function deleteFile(fileName) {
+        if (confirm(`Are you sure you want to delete "${fileName}"?`)) {
+          delete project.files[fileName];
+          localStorage.setItem("projects", JSON.stringify(projects));
+          renderFileTree();
+        }
+      }
+
+      fileSearch.addEventListener("input", renderFileTree);
+      fileFilter.addEventListener("change", renderFileTree);
+
+      createFileBtn.onclick = () => {
+        const newFileName = prompt("Enter the new file name:");
+        if (newFileName && !project.files[newFileName]) {
+          project.files[newFileName] = "";
+          localStorage.setItem("projects", JSON.stringify(projects));
+          renderFileTree();
+        }
+      };
+
+      saveBtn.onclick = () => {
+        project.files[selectedFile] = editor.getValue();
+        localStorage.setItem("projects", JSON.stringify(projects));
+        alert("File saved successfully!");
+      };
+
+      backToProjectsBtn.onclick = () => {
+        window.location.href = "/projects.html";
+      };
+
+      // Create a floating "Preview" button
+      const previewBtn = document.createElement("button");
+      previewBtn.id = "preview-btn";
+      previewBtn.textContent = "Preview";
+      previewBtn.className =
+        "fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-lg transition";
+
+      // Append to the body
+      document.body.appendChild(previewBtn);
+
+      // Event listener to open the preview in a new tab
+      previewBtn.addEventListener("click", () => {
+        const newTab = window.open("about:blank", "_blank");
+
+        if (newTab) {
+          const doc = newTab.document;
+
+          // Get user's files
+          const htmlContent = project.files["index.html"] || "";
+          const cssContent = `<style>${
+            project.files["styles.css"] || ""
+          }</style>`;
+          const jsContent = `<script>${
+            project.files["script.js"] || ""
+          }<\/script>`;
+
+          // Write content into the new tab
+          doc.write(`<!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Live Preview</title>
+        ${cssContent}
+      </head>
+      <body>
+        ${htmlContent}
+        ${jsContent}
+      </body>
+      </html>`);
+
+          doc.close(); // Finish writing
+        } else {
+          alert(
+            "Popup blocked! Please allow popups to use the preview feature."
+          );
+        }
+      });
+
+      // Keyboard Shortcuts
+      document.addEventListener("keydown", (event) => {
+        if (event.ctrlKey || event.metaKey) {
+          switch (event.key.toLowerCase()) {
+            case "s": // Save file
+              event.preventDefault();
+              project.files[selectedFile] = editor.getValue();
+              localStorage.setItem("projects", JSON.stringify(projects));
+              alert("File saved successfully!");
+              break;
+
+            case "f": // Show Search Bar
+              event.preventDefault();
+              toggleSearchBar();
+              break;
+
+            case "/": // Comment/Uncomment
+              event.preventDefault();
+              editor.toggleComment({ indent: true });
+              break;
+
+            case "z": // Undo
+              if (event.shiftKey) {
+                editor.redo();
+              } else {
+                editor.undo();
+              }
+              break;
+
+            case "y": // Redo
+              event.preventDefault();
+              editor.redo();
+              break;
+          }
+        }
+
+        // Alt + Up (Previous File) / Alt + Down (Next File)
+        if (event.altKey) {
+          switch (event.key.toLowerCase()) {
+            case "arrowup":
+              event.preventDefault();
+              switchFile(-1);
+              break;
+
+            case "arrowdown":
+              event.preventDefault();
+              switchFile(1);
+              break;
+          }
+        }
+      });
+
+      // Function to switch files using Alt + Up/Down
+      function switchFile(direction) {
+        const fileNames = Object.keys(project.files);
+        let currentIndex = fileNames.indexOf(selectedFile);
+
+        // Move to the next/previous file, looping around if needed
+        currentIndex =
+          (currentIndex + direction + fileNames.length) % fileNames.length;
+
+        selectFile(fileNames[currentIndex]);
+      }
+
+      // Initial Setup
+      renderFileTree();
+      selectFile(selectedFile);
+    </script>
+  </body>
+</html>
